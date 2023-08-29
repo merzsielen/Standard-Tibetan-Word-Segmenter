@@ -44,14 +44,14 @@ void main()
 		formatted nice and neatly, but the wiki dump has all sorts of
 		extra stuff we need to get rid of.
 	*/
-	std::wstring nontoken = Scrub(ReadFile(NONTOKENPATH));
+	/*std::wstring nontoken = Scrub(ReadFile(NONTOKENPATH));
 	std::wstring token = Scrub(ReadFile(TOKENPATH));
 
 	std::wcout << "The nontokenized corpus contains " << nontoken.size() << " characters.\n";
 	std::wcout << "And the tokenized corpus contains " << token.size() << " characters.\n";
 
 	WriteFile("datasets/output/scrubbed_nontokenized.txt", nontoken);
-	WriteFile("datasets/output/scrubbed_tokenized.txt", token);
+	WriteFile("datasets/output/scrubbed_tokenized.txt", token);*/
 
 	/*
 		Now, we need to go through and start preparing both
@@ -60,6 +60,20 @@ void main()
 	*/
 
 	NeuralNet* neuralNet = new NeuralNet();
+
+	std::vector<double> input = {	1.0, 0.0, 1.0, 0.0, 1.0,
+									0.0, 1.0, 0.0, 1.0, 0.0		};
+	std::vector<double> target = { 0.221, 0.222, 0.223, 0.224, 0.225,
+									0.226, 0.227, 0.228, 0.229, 0.23 };
+
+	for (int i = 0; i < 100; i++) neuralNet->Train(input, target);
+
+	std::vector<double> test = neuralNet->Forward(input);
+
+	for (int i = 0; i < test.size(); i++)
+	{
+		std::cout << test[i] << std::endl;
+	}
 
 	delete neuralNet;
 }

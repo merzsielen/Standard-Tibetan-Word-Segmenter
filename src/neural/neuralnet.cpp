@@ -28,7 +28,7 @@ double Clamp(double input)
 	return input;
 }
 
-std::vector<double> NeuralNet::Forward(std::vector<double> inputs)
+std::vector<double> NeuralNet::Forward(std::vector<double> inputs, bool print)
 {
 	// First, let's feed in our inputs.
 	for (int i = 0; i < layerOutputs[0].n_cols; i++)
@@ -54,6 +54,14 @@ std::vector<double> NeuralNet::Forward(std::vector<double> inputs)
 	// Penultimately, we pull out all our outputs.
 	std::vector<double> outputs;
 	for (int i = 0; i < layerOutputs[LayerCount - 1].n_cols; i++) outputs.push_back(layerOutputs[LayerCount - 1](0, i));
+
+	if (print)
+	{
+		std::cout << "------------------------------------------------------------" << std::endl;
+		std::cout << "Output: " << std::endl;
+		layerOutputs[LayerCount - 1].print();
+		std::cout << "------------------------------------------------------------" << std::endl;
+	}
 
 	// Job done.
 	return outputs;
@@ -207,9 +215,9 @@ void NeuralNet::ClearInOutputs()
 	}
 }
 
-void NeuralNet::Train(std::vector<double> inputs, std::vector<double> targets)
+void NeuralNet::Train(std::vector<double> inputs, std::vector<double> targets, bool print)
 {
-	std::vector<double> output = Forward(inputs);
+	std::vector<double> output = Forward(inputs, print);
 
 	for (int i = 0; i < output.size(); i++) output[i] -= targets[i];
 

@@ -11,7 +11,7 @@
 
 #include "utility/filehandling.h"
 #include "utility/scrubber.h"
-#include "neural/neuralnet.h"
+#include "neural/datahandler.h"
 
 #define VERSION 0.01
 
@@ -44,14 +44,14 @@ void main()
 		formatted nice and neatly, but the wiki dump has all sorts of
 		extra stuff we need to get rid of.
 	*/
-	/*std::wstring nontoken = Scrub(ReadFile(NONTOKENPATH));
+	std::wstring nontoken = Scrub(ReadFile(NONTOKENPATH));
 	std::wstring token = Scrub(ReadFile(TOKENPATH));
 
 	std::wcout << "The nontokenized corpus contains " << nontoken.size() << " characters.\n";
-	std::wcout << "And the tokenized corpus contains " << token.size() << " characters.\n";
+	std::wcout << "And the tokenized corpus contains " << token.size() << " characters.\n\n";
 
 	WriteFile("datasets/output/scrubbed_nontokenized.txt", nontoken);
-	WriteFile("datasets/output/scrubbed_tokenized.txt", token);*/
+	WriteFile("datasets/output/scrubbed_tokenized.txt", token);
 
 	/*
 		Now, we need to go through and start preparing both
@@ -60,20 +60,56 @@ void main()
 	*/
 
 	NeuralNet* neuralNet = new NeuralNet();
+	DataHandler* dataHandler = new DataHandler(neuralNet, nontoken, token);
 
-	std::vector<double> input = {	1.0, 0.0, 1.0, 0.0, 1.0,
-									0.0, 1.0, 0.0, 1.0, 0.0		};
-	std::vector<double> target = { 0.221, 0.222, 0.223, 0.224, 0.225,
-									0.226, 0.227, 0.228, 0.229, 0.23 };
-
-	for (int i = 0; i < 100; i++) neuralNet->Train(input, target);
-
-	std::vector<double> test = neuralNet->Forward(input);
-
-	for (int i = 0; i < test.size(); i++)
-	{
-		std::cout << test[i] << std::endl;
-	}
+	dataHandler->Train();
 
 	delete neuralNet;
+	delete dataHandler;
+
+	/*NeuralNet* neuralNet = new NeuralNet();
+
+	std::vector<double> trainingInputs;
+	std::vector<double> trainingTargets;
+
+	for (int i = 0; i < NeuralNet::InputCount; i++)
+	{
+		trainingInputs.push_back(WCharToDouble(token[i]));
+		std::cout << std::to_string(WCharToDouble(token[i])) << std::endl;
+	}
+	for (int i = 0; i < NeuralNet::OutputCount; i++)
+	{
+		trainingTargets.push_back(WCharToDouble(token[i]));
+		std::cout << std::to_string(WCharToDouble(token[i])) << std::endl;
+	}
+
+	int trainingIters = 1000;
+
+	for (int i = 0; i < trainingIters; i++)
+	{
+		neuralNet->Train(trainingInputs, trainingTargets, false);
+	}
+
+	double mean = 0.0;
+	for (int i = 0; i < trainingTargets.size(); i++) mean += trainingTargets[i];
+	mean /= trainingTargets.size();
+
+	double ssr = 0.0;
+	double tss = 0.0;
+
+	int count = 0;
+	for (int i = 0; i < trainingIters; i ++)
+	{
+		std::vector<double> out = neuralNet->Forward(trainingInputs, false);
+
+		for (int j = 0; j < out.size(); j++)
+		{
+			ssr += (trainingTargets[j] - out[j]) * (trainingTargets[j] - out[j]);
+			tss += (trainingTargets[j] - mean) * (trainingTargets[j] - mean);
+		}
+	}
+
+	std::cout << "R^2: " << (1.0 - (ssr / tss)) << std::endl;
+
+	delete neuralNet;*/
 }

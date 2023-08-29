@@ -7,8 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BASE_SRCS
+    "src/neural/datahandler.cpp"
+    "src/neural/datahandler.h"
     "src/neural/neuralnet.cpp"
     "src/neural/neuralnet.h"
+    "src/utility/filehandling.cpp"
     "src/utility/filehandling.h"
     "src/utility/scrubber.cpp"
     "src/utility/scrubber.h"

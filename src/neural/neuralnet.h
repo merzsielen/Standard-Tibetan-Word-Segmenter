@@ -6,10 +6,10 @@
 class NeuralNet
 {
 public:
-	static constexpr double	LearningRate = 10.0;
+	static constexpr double	LearningRate = 0.001;
 
-	static constexpr int	InputCount = 100;												// The maximum number of characters to process.
-	static constexpr int	OutputCount = InputCount;
+	static constexpr int	InputCount = 31;												// The maximum number of characters to process.
+	static constexpr int	OutputCount = 1;
 	// static constexpr int	OutputCount = (2 * InputCount);									// What if every character is separated by a space?
 	static constexpr int	HiddenNeuronCount = InputCount * 2;								// currently arbitrary (# per layer)
 	static constexpr int	HiddenLayerCount = 4;											// currently arbitrary

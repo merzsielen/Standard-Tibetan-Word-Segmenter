@@ -5,7 +5,8 @@
 #include <fstream>
 #include <sstream>
 
-std::wstring ReadFile(std::string path);
+std::wstring WReadFile(std::string path);
+std::string ReadFile(std::string path);
 
 void WriteFile(std::string path, std::wstring data);
 

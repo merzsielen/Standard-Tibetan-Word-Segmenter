@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include "csv.hpp"
+
 #include "utility/filehandling.h"
 #include "utility/scrubber.h"
 #include "neural/datahandler.h"
@@ -44,14 +46,14 @@ void main()
 		formatted nice and neatly, but the wiki dump has all sorts of
 		extra stuff we need to get rid of.
 	*/
-	std::wstring nontoken = Scrub(ReadFile(NONTOKENPATH));
-	std::wstring token = Scrub(ReadFile(TOKENPATH));
+	/*std::wstring nontoken = Scrub(WReadFile(NONTOKENPATH));
+	std::wstring token = Scrub(WReadFile(TOKENPATH));
 
 	std::wcout << "The nontokenized corpus contains " << nontoken.size() << " characters.\n";
 	std::wcout << "And the tokenized corpus contains " << token.size() << " characters.\n\n";
 
 	WriteFile("datasets/output/scrubbed_nontokenized.txt", nontoken);
-	WriteFile("datasets/output/scrubbed_tokenized.txt", token);
+	WriteFile("datasets/output/scrubbed_tokenized.txt", token);*/
 
 	/*
 		Now, we need to go through and start preparing both
@@ -59,57 +61,118 @@ void main()
 		to the neural network.
 	*/
 
-	NeuralNet* neuralNet = new NeuralNet();
+	/*NeuralNet* neuralNet = new NeuralNet();
 	DataHandler* dataHandler = new DataHandler(neuralNet, nontoken, token);
 
 	dataHandler->Train();
 
 	delete neuralNet;
-	delete dataHandler;
+	delete dataHandler;*/
 
-	/*NeuralNet* neuralNet = new NeuralNet();
+	NeuralNet* neuralNet = new NeuralNet();
 
-	std::vector<double> trainingInputs;
-	std::vector<double> trainingTargets;
 
-	for (int i = 0; i < NeuralNet::InputCount; i++)
+	int maxEpochs = 20;
+
+	for (int e = 0; e < maxEpochs; e++)
 	{
-		trainingInputs.push_back(WCharToDouble(token[i]));
-		std::cout << std::to_string(WCharToDouble(token[i])) << std::endl;
-	}
-	for (int i = 0; i < NeuralNet::OutputCount; i++)
-	{
-		trainingTargets.push_back(WCharToDouble(token[i]));
-		std::cout << std::to_string(WCharToDouble(token[i])) << std::endl;
-	}
+		csv::CSVReader trainData("datasets/input/mnist_train.csv");
 
-	int trainingIters = 1000;
-
-	for (int i = 0; i < trainingIters; i++)
-	{
-		neuralNet->Train(trainingInputs, trainingTargets, false);
-	}
-
-	double mean = 0.0;
-	for (int i = 0; i < trainingTargets.size(); i++) mean += trainingTargets[i];
-	mean /= trainingTargets.size();
-
-	double ssr = 0.0;
-	double tss = 0.0;
-
-	int count = 0;
-	for (int i = 0; i < trainingIters; i ++)
-	{
-		std::vector<double> out = neuralNet->Forward(trainingInputs, false);
-
-		for (int j = 0; j < out.size(); j++)
+		for (csv::CSVRow& row : trainData)
 		{
-			ssr += (trainingTargets[j] - out[j]) * (trainingTargets[j] - out[j]);
-			tss += (trainingTargets[j] - mean) * (trainingTargets[j] - mean);
+			std::vector<double> targets;
+			for (int i = 0; i < 10; i++) targets.push_back(0.0);
+
+			std::vector<double> inputs;
+			int iter = 0;
+
+			for (csv::CSVField& field : row)
+			{
+				double v = field.get<double>();
+				iter++;
+
+				if (iter == 1)
+				{
+					targets[v] = 1.0;
+					continue;
+				}
+				else
+				{
+					// v = (v > 128) ? 1.0 : 0.0;
+					v /= 255.0;
+				}
+
+				inputs.push_back(v);
+			}
+
+			double sum = 0.0;
+
+			neuralNet->Train(inputs, targets);
 		}
+
+		trainData.empty();
+		std::cout << "Epoch " << e << " / Training is done." << std::endl;
+
+		double ssr = 0.0;
+		double tss = 0.0;
+
+		csv::CSVReader testData("datasets/input/mnist_test.csv");
+
+		for (csv::CSVRow& row : testData)
+		{
+			std::vector<double> targets;
+			for (int i = 0; i < 10; i++) targets.push_back(0.0);
+
+			std::vector<double> inputs;
+			int iter = 0;
+
+			int tar = 0;
+
+			for (csv::CSVField& field : row)
+			{
+				double v = field.get<double>();
+				iter++;
+
+				if (iter == 1)
+				{
+					targets[v] = 1.0;
+					tar = v;
+					continue;
+				}
+				else
+				{
+					// v = (v > 128) ? 1.0 : 0.0;
+					v /= 255.0;
+				}
+
+				inputs.push_back(v);
+			}
+
+			std::vector<double> out = neuralNet->Forward(inputs);
+
+			double highestVal = 0.0;
+			int highestT = 0;
+
+			for (int i = 0; i < 10; i++)
+			{
+				double e = (targets[i] - out[i]);
+				double m = (targets[i] - 0.1);
+				ssr += e * e;
+				tss += m * m;
+
+				if (out[i] > highestVal)
+				{
+					highestVal = out[i];
+					highestT = i;
+				}
+			}
+
+			// if (e > 0) std::cout << "Epoch " << e << " / Prediction: " << highestT << " / Actual: " << tar << std::endl;
+		}
+
+		testData.empty();
+		std::cout << "Epoch " << e << " / Accuracy: " << (1.0 - (ssr / tss)) << std::endl;
 	}
 
-	std::cout << "R^2: " << (1.0 - (ssr / tss)) << std::endl;
-
-	delete neuralNet;*/
+	delete neuralNet;
 }

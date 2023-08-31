@@ -6,13 +6,13 @@
 class NeuralNet
 {
 public:
-	static constexpr double	LearningRate = 10.0;
+	static constexpr double	LearningRate = 0.1;
 
-	static constexpr int	InputCount = 100;												// The maximum number of characters to process.
-	static constexpr int	OutputCount = InputCount;
+	static constexpr int	InputCount = 784;												// The maximum number of characters to process.
+	static constexpr int	OutputCount = 10;
 	// static constexpr int	OutputCount = (2 * InputCount);									// What if every character is separated by a space?
-	static constexpr int	HiddenNeuronCount = InputCount * 2;								// currently arbitrary (# per layer)
-	static constexpr int	HiddenLayerCount = 4;											// currently arbitrary
+	static constexpr int	HiddenNeuronCount = 24;											// currently arbitrary (# per layer)
+	static constexpr int	HiddenLayerCount = 2;											// currently arbitrary
 	static constexpr int	LayerCount = (2 + HiddenLayerCount);							// only somewhat arbitrary
 	static constexpr int	LayerDerivativeCount = LayerCount - 1;							// The first layer doesn't need any derivatives.
 	static constexpr int	BiasCount = LayerCount - 1;
@@ -29,9 +29,9 @@ private:
 	arma::mat				biasDerivatives[BiasCount];
 
 public:
-	std::vector<double>		Forward(std::vector<double> inputs, bool print);				// Forward propagation
+	std::vector<double>		Forward(std::vector<double> inputs);							// Forward propagation
 	void					Back(std::vector<double> costs);								// Back propagation
-	void					Train(std::vector<double> inputs, std::vector<double> targets, bool print);	// Training!
+	double					Train(std::vector<double> inputs, std::vector<double> targets);	// Training!
 	void					ClearInOutputs();												// Duh
 
 	NeuralNet();

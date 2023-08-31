@@ -1,6 +1,6 @@
 #include "filehandling.h"
 
-std::wstring ReadFile(std::string path)
+std::wstring WReadFile(std::string path)
 {
 	std::wifstream file;
 	std::wstring data;
@@ -18,6 +18,31 @@ std::wstring ReadFile(std::string path)
 	catch (int id)
 	{
 		std::wcout << L"The file could not be found at the specified path.\n"
+			<< L"If you haven't already, move the datasets folder into the build folder and try again.\n"
+			<< L"Otherwise, throw up your hands (for now, at least).\n\n";
+	}
+
+	return data;
+}
+
+std::string ReadFile(std::string path)
+{
+	std::ifstream file;
+	std::string data;
+	try
+	{
+		file.open(path);
+		if (file.fail()) throw 1;
+
+		std::stringstream buff;
+		buff << file.rdbuf();
+		data = buff.str();
+
+		file.close();
+	}
+	catch (int id)
+	{
+		std::cout << L"The file could not be found at the specified path.\n"
 			<< L"If you haven't already, move the datasets folder into the build folder and try again.\n"
 			<< L"Otherwise, throw up your hands (for now, at least).\n\n";
 	}

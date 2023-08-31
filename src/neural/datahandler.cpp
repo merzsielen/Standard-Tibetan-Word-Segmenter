@@ -41,6 +41,8 @@ void DataHandler::Train()
 	std::vector<double> inputs;
 	std::vector<double> targets;
 
+	std::wstring errorHist;
+
 	while (true)
 	{
 		// We've reached the end of the corpus and done the
@@ -71,7 +73,8 @@ void DataHandler::Train()
 		// to the neural network.
 		if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0)
 		{
-			network->Train(inputs, targets, false);
+			double l = network->Train(inputs, targets);
+			errorHist += std::to_wstring(l) + L"	";
 			inputs.clear();
 			targets.clear();
 			trainIter++;
@@ -82,44 +85,8 @@ void DataHandler::Train()
 	std::cout << "Now, we move on to testing.\n";
 
 	/*
-		Then, we're going to test it quickly on
-		the first ten characters from the
-		nontokenized corpus.
+		Now, we're going to test it quickly.
 	*/
-	/*inputs.clear();
-	targets.clear();
-	std::wstring inputText;
-	std::wstring targetText;
-	std::wstring outputText;
-
-	std::wstring testPhrase = L"བཀྲ་ཤིས་བདེ་ལེགསབཀྲ་ཤིས་བདེ་ལེགསབཀྲ་ཤིས་བདེ་ལེགསབཀྲ་ཤིས་བདེ་ལེགསབཀྲ་ཤིས་བདེ་ལེགསབཀྲ་ཤིས་བདེ་ལེགསབཀྲ";
-
-	charIter = 0;
-	while (true)
-	{
-		wchar_t c = testPhrase[charIter];
-		double d = WCharToDouble(c);
-
-		inputText += c;
-		if (c != L' ')
-		{
-			inputs.push_back(d);
-		}
-
-		charIter++;
-		if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0) break;
-	}
-
-	std::vector out = network->Forward(inputs, false);
-
-	for (int i = 0; i < out.size(); i++)
-	{
-		outputText += inputText[i];
-		if (out[i]) outputText += L" ";
-	}
-
-	WriteFile("datasets/output/test_nontokens.txt", outputText);
-	std::cout << "Job done.\n";*/
 
 	inputs.clear();
 	targets.clear();
@@ -148,7 +115,7 @@ void DataHandler::Train()
 		if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0) break;
 	}
 
-	std::vector out = network->Forward(inputs, false);
+	std::vector out = network->Forward(inputs);
 
 	double ssr = 0.0;
 	double tss = 0.0;
@@ -172,12 +139,8 @@ void DataHandler::Train()
 		if (out[i]) test += L" ";
 	}
 
-	for (int i = 0; i < out.size(); i++) std::cout << out[i] << " / ";
-	std::cout << std::endl;
-	for (int i = 0; i < targets.size(); i++) std::cout << targets[i] << " / ";
-	std::cout << std::endl;
-
 	WriteFile("datasets/output/test_tokens.txt", test);
+	WriteFile("datasets/output/error_hist.txt", errorHist);
 	std::cout << "Job done.\n";
 }
 

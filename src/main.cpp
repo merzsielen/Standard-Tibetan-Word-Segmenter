@@ -33,7 +33,7 @@ void main()
 	std::string ostr = o.str();
 	std::wstring ver(ostr.begin(), ostr.end());
 	std::wcout << L"Tashi delek!\n"
-		<<"You are running the Lhasa Tibetan NNTokenizer.\n"
+		<<"You are running the Lhasa Tibetan NNSegmenter.\n"
 		<< L"Version: " + ver + L".\n\n";
 
 	/*

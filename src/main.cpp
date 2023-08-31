@@ -69,10 +69,9 @@ void main()
 	delete neuralNet;
 	delete dataHandler;*/
 
-	NeuralNet* neuralNet = new NeuralNet();
+	NeuralNet* neuralNet = new NeuralNet({ LayerType::hidden, LayerType::hidden });
 
-
-	int maxEpochs = 20;
+	int maxEpochs = 40;
 
 	for (int e = 0; e < maxEpochs; e++)
 	{

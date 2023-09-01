@@ -35,7 +35,7 @@ public:
 
 	static constexpr int	InputCount = 784;												
 	static constexpr int	OutputCount = 10;
-	static constexpr int	HiddenNeuronCount = 32;											// currently arbitrary (# per layer)
+	static constexpr int	HiddenNeuronCount = 48;											// currently arbitrary (# per layer)
 	static constexpr int	HiddenLayerCount = 2;											// currently arbitrary
 	static constexpr int	LayerCount = (2 + HiddenLayerCount);							// only somewhat arbitrary
 

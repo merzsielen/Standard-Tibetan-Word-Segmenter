@@ -52,42 +52,25 @@ std::vector<double> NeuralNet::Forward(std::vector<double> inputs)
 				Okay, so, we have a convolutional layer.
 				This is a shame because they're not as neat
 				and tidy as the others.
-
-				We have to iterate over each NxN section of
-				the outputs, apply the kernel, then transfer
-				the results into the inputs of the current
-				layer.
 			*/
 
 			// What is the width / height of the input layer.
-			unsigned int inStride = sqrt(in->inputs.n_cols);
+			unsigned int inSize = sqrt(in->inputs.n_cols);
 
 			// What is the width / height of the output layer.
-			unsigned int outStride = sqrt(out->outputs.n_cols);
+			unsigned int outSize = sqrt(out->outputs.n_cols);
 
+			arma::mat outConv = arma::mat(outSize, outSize);
+			for (int j = 0; j < out->outputs.n_cols; j++)
+			{
+				outConv(j % outSize, j / outSize) = out->outputs(0, j);
+			}
+
+			arma::mat inConv = arma::conv2(outConv, in->filter, "same");
+			
 			for (int j = 0; j < in->inputs.n_cols; j++)
 			{
-				unsigned int ix = j % inStride;
-				unsigned int iy = j / inStride;
-
-				unsigned int index = ix + (iy * outStride);
-
-				double sum = 0.0;
-
-				// I know, way too many nested for-loops.
-				// I'm in too deep.
-				// Only Torvalds can forgive me now.
-				for (int k = 0; k < in->filter.n_rows; k++)
-				{
-					for (int l = 0; l < in->filter.n_cols; l++)
-					{
-						sum += out->outputs(0, index + l) * in->filter(k, l);
-					}
-
-					index += outStride;
-				}
-
-				in->inputs(0, j) = sum;
+				in->inputs(0, j) = inConv(j % inSize, j / inSize);
 			}
 		}
 		else
@@ -218,41 +201,45 @@ void NeuralNet::Back(std::vector<double> costs)
 				preceding a convolutional layer is the sum of the derivatives
 				of the error with regard to the nodes in the convolutional layer
 				that are affected by the node in question.
+
+				First, we'll calculate the output derivatives of the current
+				layer by preparing a 2d matrix of the next layer's derivatives
+				and then convoluting it w/ the filter. This should yield a
+				matrix of the same dimensions which has the derivative of the
+				error with respect to the outputs of the current layer.
 			*/
 
 			// What is the width / height of the input layer.
-			unsigned int inStride = sqrt(next->inputs.n_cols);
+			unsigned int inSize = sqrt(next->inputs.n_cols);
 
-			// What is the width / height of the output layer.
-			unsigned int outStride = sqrt(current->outputs.n_cols);
-
-			// Now we iterate over the inputs of the next layer
+			arma::mat nextDerivatives = arma::mat(inSize, inSize);
 			for (int j = 0; j < next->inputs.n_cols; j++)
 			{
-				unsigned int ix = j % inStride;
-				unsigned int iy = j / inStride;
-
-				unsigned int index = ix + (iy * outStride);
-
-				double outputDeriv = next->outputDerivatives(0, j);
-				double inputDeriv = next->inputDerivatives(0, j);
-
-				double sum = 0.0;
-
-				for (int k = 0; k < next->filter.n_rows; k++)
-				{
-					for (int l = 0; l < next->filter.n_cols; l++)
-					{
-						double fDeriv = current->outputs(0, index);
-						double kDeriv = next->filter(k, l);
-
-						current->outputDerivatives(0, index + l) += outputDeriv * inputDeriv * kDeriv;
-						next->filterDerivatives(k, l) = outputDeriv * inputDeriv * fDeriv;
-					}
-
-					index += outStride;
-				}
+				nextDerivatives(j % inSize, j / inSize) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
 			}
+
+			arma::mat currentDerivatives = arma::conv2(nextDerivatives, next->filter, "same");
+			for (int j = 0; j < current->outputs.n_cols; j++)
+			{
+				nextDerivatives(j% inSize, j / inSize) *= current->outputs(0, j);
+				current->outputDerivatives(0, j) = currentDerivatives(j % inSize, j / inSize);
+			}
+
+			/*
+				Now we have to calculate the derivatives of the
+				filter which is more complex. The derivative of the error
+				with respect to each node in the filter is equal to the
+				derivative of the error with respect to the outputs of the
+				next layer times the derivative of those outputs with respect
+				to the inputs times the derivative of those inputs with respect
+				to the node in the filter. The derivative of an input with respect
+				to a particular node in the filter is equal to the sum of the
+				outputs of the neurons in the preceding layer that are multiplied
+				by that node in the filter and go into the specific input in the
+				next layer.
+			*/
+
+			next->filterDerivatives = arma::conv2(next->filter, nextDerivatives, "same");
 
 			// And now we need to throw together the input derivatives.
 			for (int j = 0; j < current->inputs.n_cols; j++)
@@ -275,6 +262,7 @@ void NeuralNet::Back(std::vector<double> costs)
 
 		// We don't need to calculate weight derivatives for
 		// convolutional layers.
+
 		if (current->layerType == LayerType::convolutional) continue;
 
 		/*
@@ -312,6 +300,34 @@ void NeuralNet::Back(std::vector<double> costs)
 				current->weightDerivatives(j, k) = outputDeriv * inputDeriv * weightDeriv;
 			}
 		}
+	}
+
+	/*
+		Because of the way that previous loop is written, I actually
+		need to check if the second layer is a convolutional layer and update its
+		derivatives if so. Luckily, this mostly involves reiterating code we've
+		already written.
+	*/
+	if (layers[1].layerType == LayerType::convolutional)
+	{
+		Layer* current = &layers[0];
+		Layer* next = &layers[1];
+
+		unsigned int inSize = sqrt(next->inputs.n_cols);
+
+		arma::mat nextDerivatives = arma::mat(inSize, inSize);
+		for (int j = 0; j < next->inputs.n_cols; j++)
+		{
+			nextDerivatives(j % inSize, j / inSize) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
+		}
+
+		arma::mat currentDerivatives = arma::conv2(nextDerivatives, next->filter, "same");
+		for (int j = 0; j < current->outputs.n_cols; j++)
+		{
+			nextDerivatives(j % inSize, j / inSize) *= current->outputs(0, j);
+		}
+
+		next->filterDerivatives = arma::conv2(next->filter, nextDerivatives, "same");
 	}
 
 	/*
@@ -404,14 +420,16 @@ NeuralNet::NeuralNet(std::vector<LayerType> hiddenLayerTypes)
 			// shape of the kernel. I'll add a tag here to
 			// remind myself: [KERNEL_CHANGE].
 			layers[i].filter = arma::mat(Layer::KernelSize, Layer::KernelSize, arma::fill::randu);
+
+			for (int j = 0; j < Layer::KernelSize * Layer::KernelSize; j++)
+			{
+				layers[i].filter(j % Layer::KernelSize, j / Layer::KernelSize) *= 10.0;
+			}
+
 			layers[i].filterDerivatives = arma::mat(Layer::KernelSize, Layer::KernelSize);
 
-			int precWidth = sqrt(layers[i - 1].outputs.n_cols);
-			int kernelDiff = Layer::KernelSize - 1;
-			int convLayerSize = (precWidth - kernelDiff) * (precWidth - kernelDiff);
-
-			layers[i].inputs = arma::mat(1, convLayerSize);
-			layers[i].outputs = arma::mat(1, convLayerSize);
+			layers[i].inputs = arma::mat(1, layers[i - 1].outputs.n_cols);
+			layers[i].outputs = arma::mat(1, layers[i].inputs.n_cols);
 		}
 		else
 		{

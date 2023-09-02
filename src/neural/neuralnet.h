@@ -3,7 +3,8 @@
 
 #include <armadillo>
 
-enum class LayerType { input, output, hidden, convolutional };
+enum class LayerType { input, output, hidden, convolutional, pooling };
+enum class PoolType { average, max };
 
 struct Layer
 {
@@ -21,22 +22,24 @@ struct Layer
 	arma::mat				biasDerivatives;
 	arma::mat				weightDerivatives;
 
-	// Adding a tag to remind myself to change this when we
-	// change the kernel size: [KERNEL_CHANGE].
-	static constexpr int	KernelSize = 3;
+	bool					twoDimInputs = true;
+
+	int						kernelSize = 3;
 	arma::mat				filter;
 	arma::mat				filterDerivatives;
+
+	PoolType				poolType;
 };
 
 class NeuralNet
 {
 public:
-	static constexpr double	LearningRate = 0.05;
+	static constexpr double	LearningRate = 0.1;
 
-	static constexpr int	InputCount = 784;												
+	static constexpr int	InputCount = 784;
 	static constexpr int	OutputCount = 10;
 	static constexpr int	HiddenNeuronCount = 48;											// currently arbitrary (# per layer)
-	static constexpr int	HiddenLayerCount = 2;											// currently arbitrary
+	static constexpr int	HiddenLayerCount = 3;											// currently arbitrary
 	static constexpr int	LayerCount = (2 + HiddenLayerCount);							// only somewhat arbitrary
 
 private:
@@ -48,7 +51,7 @@ public:
 	double					Train(std::vector<double> inputs, std::vector<double> targets);	// Training!
 	void					ClearInOutputs();												// Duh
 
-	NeuralNet(std::vector<LayerType> hiddenLayerTypes);
+	NeuralNet(std::vector<LayerType> hiddenLayerTypes, std::vector<PoolType> poolTypes);
 };
 
 #endif

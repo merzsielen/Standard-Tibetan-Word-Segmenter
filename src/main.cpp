@@ -61,7 +61,7 @@ void main()
 		to the neural network.
 	*/
 
-	/*NeuralNet* neuralNet = new NeuralNet();
+	/*NeuralNet* neuralNet = new NeuralNet({ LayerType::hidden, LayerType::hidden }, { });
 	DataHandler* dataHandler = new DataHandler(neuralNet, nontoken, token);
 
 	dataHandler->Train();
@@ -69,7 +69,7 @@ void main()
 	delete neuralNet;
 	delete dataHandler;*/
 
-	NeuralNet* neuralNet = new NeuralNet({ LayerType::hidden, LayerType::hidden });
+	NeuralNet* neuralNet = new NeuralNet({ LayerType::convolutional, LayerType::pooling, LayerType::hidden, LayerType::hidden }, { PoolType::average });
 
 	int maxEpochs = 40;
 
@@ -166,7 +166,6 @@ void main()
 				}
 			}
 
-			// if (e > 0) std::cout << "Epoch " << e << " / Prediction: " << highestT << " / Actual: " << tar << std::endl;
 		}
 
 		testData.empty();

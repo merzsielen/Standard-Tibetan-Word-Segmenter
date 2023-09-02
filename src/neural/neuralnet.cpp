@@ -50,27 +50,71 @@ std::vector<double> NeuralNet::Forward(std::vector<double> inputs)
 		{
 			/*
 				Okay, so, we have a convolutional layer.
-				This is a shame because they're not as neat
-				and tidy as the others.
+				1D convolutional layers are nice and easy.
 			*/
 
-			// What is the width / height of the input layer.
-			unsigned int inSize = sqrt(in->inputs.n_cols);
-
-			// What is the width / height of the output layer.
-			unsigned int outSize = sqrt(out->outputs.n_cols);
-
-			arma::mat outConv = arma::mat(outSize, outSize);
-			for (int j = 0; j < out->outputs.n_cols; j++)
+			if (in->twoDimInputs)
 			{
-				outConv(j % outSize, j / outSize) = out->outputs(0, j);
+				// What is the width / height of the input layer.
+				unsigned int inSize = sqrt(in->inputs.n_cols);
+
+				// What is the width / height of the output layer.
+				unsigned int outSize = sqrt(out->outputs.n_cols);
+
+				arma::mat outConv = arma::mat(outSize, outSize);
+				for (int j = 0; j < out->outputs.n_cols; j++)
+				{
+					outConv(j % outSize, j / outSize) = out->outputs(0, j);
+				}
+
+				arma::mat inConv = arma::conv2(outConv, in->filter, "same");
+
+				for (int j = 0; j < in->inputs.n_cols; j++)
+				{
+					in->inputs(0, j) = inConv(j % inSize, j / inSize);
+				}
 			}
-
-			arma::mat inConv = arma::conv2(outConv, in->filter, "same");
-			
-			for (int j = 0; j < in->inputs.n_cols; j++)
+			else
 			{
-				in->inputs(0, j) = inConv(j % inSize, j / inSize);
+				in->inputs = arma::conv(out->outputs, in->filter, "same");
+			}
+		}
+		else if (in->layerType == LayerType::pooling)
+		{
+			/*
+				Pooling layers apply some function across
+				sections of the preceding layer.
+			*/
+
+			if (in->twoDimInputs)
+			{
+				if (in->poolType == PoolType::average)
+				{
+					// RESUME HERE!!!
+				}
+				else // if (in->poolType == PoolType::max)
+				{
+
+				}
+			}
+			else
+			{
+				if (in->poolType == PoolType::average)
+				{
+					for (int j = 0; j < out->outputs.n_cols; j += 2)
+					{
+						double sum = out->outputs(0, j) + out->outputs(0, j + 1);
+						in->inputs(0, j / 2) = (sum / 2.0);
+					}
+				}
+				else // if (in->poolType == PoolType::max)
+				{
+					for (int j = 0; j < out->outputs.n_cols; j += 2)
+					{
+						double max = std::max(out->outputs(0, j), out->outputs(0, j + 1));
+						in->inputs(0, j / 2) = max;
+					}
+				}
 			}
 		}
 		else
@@ -165,7 +209,8 @@ void NeuralNet::Back(std::vector<double> costs)
 			next-layer neuron times the weight between the two neurons.
 		*/
 
-		if (next->layerType != LayerType::convolutional)
+		if (next->layerType != LayerType::convolutional &&
+			next->layerType != LayerType::pooling)
 		{
 			for (int j = 0; j < current->outputs.n_cols; j++)
 			{
@@ -184,7 +229,7 @@ void NeuralNet::Back(std::vector<double> costs)
 				current->inputDerivatives(0, j) = LogisticDerivative(current->inputs(0, j));
 			}
 		}
-		else // if (next->layerType == LayerType::convolutional)
+		else if (next->layerType == LayerType::convolutional)
 		{
 			/*
 				Calculating the derivatives of layers preceding convolutional
@@ -209,42 +254,95 @@ void NeuralNet::Back(std::vector<double> costs)
 				error with respect to the outputs of the current layer.
 			*/
 
-			// What is the width / height of the input layer.
-			unsigned int inSize = sqrt(next->inputs.n_cols);
+			arma::mat nextDerivatives;
 
-			arma::mat nextDerivatives = arma::mat(inSize, inSize);
-			for (int j = 0; j < next->inputs.n_cols; j++)
+			if (next->twoDimInputs)
 			{
-				nextDerivatives(j % inSize, j / inSize) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
-			}
+				// What is the width / height of the input layer.
+				unsigned int inSize = sqrt(next->inputs.n_cols);
 
-			arma::mat currentDerivatives = arma::conv2(nextDerivatives, next->filter, "same");
-			for (int j = 0; j < current->outputs.n_cols; j++)
+				nextDerivatives = arma::mat(inSize, inSize);
+				for (int j = 0; j < next->inputs.n_cols; j++)
+				{
+					nextDerivatives(j % inSize, j / inSize) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
+				}
+
+				arma::mat currentDerivatives = arma::conv2(nextDerivatives, next->filter, "same");
+				for (int j = 0; j < current->outputs.n_cols; j++)
+				{
+					nextDerivatives(j % inSize, j / inSize) *= current->outputs(0, j);
+					current->outputDerivatives(0, j) = currentDerivatives(j % inSize, j / inSize);
+				}
+
+				/*
+					Now we have to calculate the derivatives of the
+					filter which is more complex. The derivative of the error
+					with respect to each node in the filter is equal to the
+					derivative of the error with respect to the outputs of the
+					next layer times the derivative of those outputs with respect
+					to the inputs times the derivative of those inputs with respect
+					to the node in the filter. The derivative of an input with respect
+					to a particular node in the filter is equal to the sum of the
+					outputs of the neurons in the preceding layer that are multiplied
+					by that node in the filter and go into the specific input in the
+					next layer.
+				*/
+
+				next->filterDerivatives = arma::conv2(next->filter, nextDerivatives, "same");
+			}
+			else
 			{
-				nextDerivatives(j% inSize, j / inSize) *= current->outputs(0, j);
-				current->outputDerivatives(0, j) = currentDerivatives(j % inSize, j / inSize);
+				nextDerivatives = arma::mat(1, next->outputDerivatives.n_cols);
+				for (int j = 0; j < next->outputDerivatives.n_cols; j++) nextDerivatives(0, j) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
+
+				current->outputDerivatives = arma::conv(nextDerivatives, next->filter, "same");
+
+				for (int j = 0; j < current->outputs.n_cols; j++)
+				{
+					nextDerivatives(0, j) *= current->outputs(0, j);
+				}
+
+				next->filterDerivatives = arma::conv(next->filter, nextDerivatives, "same");
 			}
-
-			/*
-				Now we have to calculate the derivatives of the
-				filter which is more complex. The derivative of the error
-				with respect to each node in the filter is equal to the
-				derivative of the error with respect to the outputs of the
-				next layer times the derivative of those outputs with respect
-				to the inputs times the derivative of those inputs with respect
-				to the node in the filter. The derivative of an input with respect
-				to a particular node in the filter is equal to the sum of the
-				outputs of the neurons in the preceding layer that are multiplied
-				by that node in the filter and go into the specific input in the
-				next layer.
-			*/
-
-			next->filterDerivatives = arma::conv2(next->filter, nextDerivatives, "same");
 
 			// And now we need to throw together the input derivatives.
 			for (int j = 0; j < current->inputs.n_cols; j++)
 			{
 				current->inputDerivatives(0, j) = LogisticDerivative(current->inputs(0, j));
+			}
+		}
+		else // if (next->layerType == LayerType::pooling)
+		{
+			/*
+				Calculating the derivatives of a layer preceding a pooling layer isn't
+				as elegant as the preceding layer types.
+			*/
+
+			for (int j = 0; j < next->inputs.n_cols; j++)
+			{
+				double outputDeriv = next->outputDerivatives(0, j);
+				double inputDeriv = next->inputDerivatives(0, j);
+				double funcDerivA = 0.5;
+				double funcDerivB = 0.5;
+
+				if (next->poolType == PoolType::max)
+				{
+					/*
+						So, whichever has the higher output has a funcDeriv of 1.0,
+						whereas the lower has the funcDeriv of 0.0.
+					*/
+
+					bool aHigherB = (current->outputs(0, j * 2) > current->outputs(0, (j * 2) + 1));
+
+					funcDerivA = aHigherB ? 1.0 : 0.0;
+					funcDerivB = !aHigherB ? 1.0 : 0.0;
+				}
+
+				current->outputDerivatives(0, j * 2) = outputDeriv * inputDeriv * funcDerivA;
+				current->inputDerivatives(0, j * 2) = LogisticDerivative(current->inputs(0, j * 2));
+
+				current->outputDerivatives(0, (j * 2) + 1) = outputDeriv * inputDeriv * funcDerivB;
+				current->inputDerivatives(0, (j * 2) + 1) = LogisticDerivative(current->inputs(0, (j * 2) + 1));
 			}
 		}
 
@@ -263,7 +361,8 @@ void NeuralNet::Back(std::vector<double> costs)
 		// We don't need to calculate weight derivatives for
 		// convolutional layers.
 
-		if (current->layerType == LayerType::convolutional) continue;
+		if (current->layerType == LayerType::convolutional ||
+			current->layerType == LayerType::pooling) continue;
 
 		/*
 			Let's say that a weight takes the outputs from
@@ -308,26 +407,49 @@ void NeuralNet::Back(std::vector<double> costs)
 		derivatives if so. Luckily, this mostly involves reiterating code we've
 		already written.
 	*/
+
 	if (layers[1].layerType == LayerType::convolutional)
 	{
 		Layer* current = &layers[0];
 		Layer* next = &layers[1];
 
-		unsigned int inSize = sqrt(next->inputs.n_cols);
+		arma::mat nextDerivatives;
 
-		arma::mat nextDerivatives = arma::mat(inSize, inSize);
-		for (int j = 0; j < next->inputs.n_cols; j++)
+		if (next->twoDimInputs)
 		{
-			nextDerivatives(j % inSize, j / inSize) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
-		}
+			unsigned int inSize = sqrt(next->inputs.n_cols);
 
-		arma::mat currentDerivatives = arma::conv2(nextDerivatives, next->filter, "same");
-		for (int j = 0; j < current->outputs.n_cols; j++)
+			nextDerivatives = arma::mat(inSize, inSize);
+			for (int j = 0; j < next->inputs.n_cols; j++)
+			{
+				nextDerivatives(j % inSize, j / inSize) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
+			}
+
+			arma::mat currentDerivatives = arma::conv2(nextDerivatives, next->filter, "same");
+			for (int j = 0; j < current->outputs.n_cols; j++)
+			{
+				nextDerivatives(j % inSize, j / inSize) *= current->outputs(0, j);
+			}
+
+			next->filterDerivatives = arma::conv2(next->filter, nextDerivatives, "same");
+		}
+		else
 		{
-			nextDerivatives(j % inSize, j / inSize) *= current->outputs(0, j);
-		}
+			nextDerivatives = arma::mat(1, next->outputDerivatives.n_cols);
+			for (int j = 0; j < next->outputDerivatives.n_cols; j++)
+			{
+				nextDerivatives(0, j) = next->outputDerivatives(0, j) * next->inputDerivatives(0, j);
+			}
 
-		next->filterDerivatives = arma::conv2(next->filter, nextDerivatives, "same");
+			current->outputDerivatives = arma::conv(nextDerivatives, next->filter, "same");
+
+			for (int j = 0; j < current->outputs.n_cols; j++)
+			{
+				nextDerivatives(0, j) *= current->outputs(0, j);
+			}
+
+			next->filterDerivatives = arma::conv(next->filter, nextDerivatives, "same");
+		}
 	}
 
 	/*
@@ -378,10 +500,11 @@ double NeuralNet::Train(std::vector<double> inputs, std::vector<double> targets)
 	return loss;
 }
 
-NeuralNet::NeuralNet(std::vector<LayerType> hiddenLayerTypes)
+NeuralNet::NeuralNet(std::vector<LayerType> hiddenLayerTypes, std::vector<PoolType> poolTypes)
 {
 	// Seed arma random
 	arma::arma_rng::set_seed_random();
+	int pools = 0;
 
 	/*
 		First, let's instantiate our layers.
@@ -419,17 +542,33 @@ NeuralNet::NeuralNet(std::vector<LayerType> hiddenLayerTypes)
 			// We'll need to change this when we change the
 			// shape of the kernel. I'll add a tag here to
 			// remind myself: [KERNEL_CHANGE].
-			layers[i].filter = arma::mat(Layer::KernelSize, Layer::KernelSize, arma::fill::randu);
 
-			for (int j = 0; j < Layer::KernelSize * Layer::KernelSize; j++)
+			if (layers[i].twoDimInputs)
 			{
-				layers[i].filter(j % Layer::KernelSize, j / Layer::KernelSize) *= 10.0;
-			}
+				int ks = layers[i].kernelSize;
 
-			layers[i].filterDerivatives = arma::mat(Layer::KernelSize, Layer::KernelSize);
+				layers[i].filter = arma::mat(ks, ks, arma::fill::randu);
+
+				layers[i].filterDerivatives = arma::mat(ks, ks);
+			}
+			else
+			{
+				layers[i].filter = arma::mat(1, layers[i].kernelSize, arma::fill::randu);
+
+				layers[i].filterDerivatives = arma::mat(layers[i].filter.n_rows, layers[i].filter.n_cols);
+			}
 
 			layers[i].inputs = arma::mat(1, layers[i - 1].outputs.n_cols);
 			layers[i].outputs = arma::mat(1, layers[i].inputs.n_cols);
+		}
+		else if (layers[i].layerType == LayerType::pooling)
+		{
+			layers[i].poolType = poolTypes[pools];
+
+			layers[i].inputs = arma::mat(1, layers[i - 1].outputs.n_cols / 2);
+			layers[i].outputs = arma::mat(1, layers[i].inputs.n_cols);
+
+			pools++;
 		}
 		else
 		{
@@ -461,7 +600,8 @@ NeuralNet::NeuralNet(std::vector<LayerType> hiddenLayerTypes)
 	{
 		// Convolutional layers are strange in that they apply filters rather than weights.
 		// We already instantiated the filters so we can ignore them.
-		if (layers[i].layerType == LayerType::convolutional) continue;
+		if (layers[i].layerType == LayerType::convolutional ||
+			layers[i].layerType == LayerType::pooling) continue;
 
 		// The number of columns in the weights must be equal to the number of outputs of the
 		// preceding layer, while the number of rows must equal the number of inputs of this layer.

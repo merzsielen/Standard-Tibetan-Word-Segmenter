@@ -21,3 +21,8 @@ std::wstring Scrub(std::wstring in)
 
 	return out;
 }
+
+std::wstring Syllabize(std::wstring in)
+{
+	return L"";
+}

@@ -1,29 +1,29 @@
 ﻿#include "datahandler.h"
 #include "../utility/filehandling.h"
 
-double WCharToDouble(wchar_t c)
-{
-	if (c == L' ') return DataHandler::wcharOffset - 0.001;
-	return DataHandler::wcharOffset + (0.001 * ((int)c - DataHandler::blockStart));
-}
-
-wchar_t DoubleToWChar(double d)
-{
-	if (d < DataHandler::wcharOffset) return L' ';
-	return (wchar_t)(((d - DataHandler::wcharOffset) * 1000) + DataHandler::blockStart);
-}
-
 //double WCharToDouble(wchar_t c)
 //{
-//	if (c == L' ') return 0.0;
-//	return (((int)c + 1) - DataHandler::blockStart) / (double)DataHandler::blockLength;
+//	if (c == L' ') return DataHandler::wcharOffset - 0.001;
+//	return DataHandler::wcharOffset + (0.001 * ((int)c - DataHandler::blockStart));
 //}
 //
 //wchar_t DoubleToWChar(double d)
 //{
-//	if (d == 0.0) return L' ';
-//	return (wchar_t)((int)(d * DataHandler::blockLength) + 1 + DataHandler::blockStart);
+//	if (d < DataHandler::wcharOffset) return L' ';
+//	return (wchar_t)(((d - DataHandler::wcharOffset) * 1000) + DataHandler::blockStart);
 //}
+
+double WCharToDouble(wchar_t c)
+{
+	if (c == L' ') return 0.0;
+	return (((int)c + 1) - DataHandler::blockStart) / (double)DataHandler::blockLength;
+}
+
+wchar_t DoubleToWChar(double d)
+{
+	if (d == 0.0) return L' ';
+	return (wchar_t)((int)(d * DataHandler::blockLength) + DataHandler::blockStart - 1);
+}
 
 void DataHandler::Train()
 {
@@ -35,113 +35,111 @@ void DataHandler::Train()
 		then hand the neural network the input and target data.
 	*/
 
-	int charIter = 0;
-	int trainIter = 0;
-
-	std::vector<double> inputs;
-	std::vector<double> targets;
-
-	std::wstring errorHist;
-
-	while (true)
+	unsigned int maxEpochs = 40;
+	for (int e = 0; e < maxEpochs; e++)
 	{
-		// We've reached the end of the corpus and done the
-		// required number of training iterations (which is currently
-		// arbitrary and doesn't really seem to matter).
-		/*if (trainIter >= 500000) break;
-		if (charIter > tokenizedCorpus.size() - 1) charIter = 0;*/
-		if (charIter > tokenizedCorpus.size() - 1) break;
+		int charIter = 0;
+		int trainIter = 0;
 
-		// Otherwise, keep chugging along.
-		wchar_t c = tokenizedCorpus[charIter];
-		double d = WCharToDouble(c);
+		std::vector<double> inputs;
+		std::vector<double> targets;
 
-		// We only add spaces to the target values.
-		if (c != L' ')
+		while (true)
 		{
-			inputs.push_back(d);
-			targets.push_back(0.0);
-		}
-		else if (targets.size() > 0)
-		{
-			targets[targets.size() - 1] = 1.0;
+			// We've reached the end of the corpus and done the
+			// required number of training iterations (which is currently
+			// arbitrary and doesn't really seem to matter).
+			/*if (trainIter >= 500000) break;
+			if (charIter > tokenizedCorpus.size() - 1) charIter = 0;*/
+			if (charIter > tokenizedCorpus.size() - 1) break;
+
+			// Otherwise, keep chugging along.
+			wchar_t c = tokenizedCorpus[charIter];
+			double d = WCharToDouble(c);
+
+			// We only add spaces to the target values.
+			if (c != L' ')
+			{
+				inputs.push_back(d);
+				targets.push_back(0.0);
+			}
+			else if (targets.size() > 0)
+			{
+				targets[targets.size() - 1] = 1.0;
+			}
+
+			charIter++;
+
+			// If we've got enough inputs, send it along
+			// to the neural network.
+			if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0)
+			{
+				double l = network->Train(inputs, targets);
+				inputs.clear();
+				targets.clear();
+				trainIter++;
+			}
 		}
 
-		charIter++;
+		std::cout << "Did " << trainIter << " iterations of training for epoch " << e << "\n";
 
-		// If we've got enough inputs, send it along
-		// to the neural network.
-		if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0)
+		/*
+			Now, we're going to test it quickly.
+		*/
+
+		inputs.clear();
+		targets.clear();
+		std::wstring inputText;
+		std::wstring targetText;
+
+		charIter = rand() % 10000;
+		while (true)
 		{
-			double l = network->Train(inputs, targets);
-			errorHist += std::to_wstring(l) + L"	";
-			inputs.clear();
-			targets.clear();
-			trainIter++;
+			wchar_t c = tokenizedCorpus[charIter];
+			double d = WCharToDouble(c);
+
+			targetText += c;
+			if (c != L' ')
+			{
+				inputText += c;
+				inputs.push_back(d);
+				targets.push_back(0.0);
+			}
+			else if (targets.size() > 0)
+			{
+				targets[targets.size() - 1] = 1.0;
+			}
+
+			charIter++;
+			if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0) break;
 		}
+
+		std::vector out = network->Forward(inputs);
+
+		double ssr = 0.0;
+		double tss = 0.0;
+
+		double mean = 0.0;
+		for (int i = 0; i < targets.size(); i++) mean += targets[i];
+		mean /= targets.size();
+
+		for (int j = 0; j < out.size(); j++)
+		{
+			ssr += (targets[j] - out[j]) * (targets[j] - out[j]);
+			tss += (targets[j] - mean) * (targets[j] - mean);
+		}
+
+		std::cout << "Epoch: " << e << " / R^2: " << (1.0 - (ssr / tss)) << std::endl;
+		std::wstring test = inputText + L"\n" + targetText + L"\n";
+
+		for (int i = 0; i < out.size(); i++)
+		{
+			test += inputText[i];
+			if (out[i] > 0.5) test += L" ";
+		}
+
+		WriteFile("datasets/output/test_tokens" + std::to_string(e) + ".txt", test);
 	}
-
-	std::cout << "Did " << trainIter << " iterations of training.\n";
-	std::cout << "Now, we move on to testing.\n";
-
-	/*
-		Now, we're going to test it quickly.
-	*/
-
-	inputs.clear();
-	targets.clear();
-	std::wstring inputText;
-	std::wstring targetText;
-
-	charIter = rand() % 10000;
-	while (true)
-	{
-		wchar_t c = tokenizedCorpus[charIter];
-		double d = WCharToDouble(c);
-
-		targetText += c;
-		if (c != L' ')
-		{
-			inputText += c;
-			inputs.push_back(d);
-			targets.push_back(0.0);
-		}
-		else if (targets.size() > 0)
-		{
-			targets[targets.size() - 1] = 1.0;
-		}
-
-		charIter++;
-		if (inputs.size() && inputs.size() % NeuralNet::InputCount == 0) break;
-	}
-
-	std::vector out = network->Forward(inputs);
-
-	double ssr = 0.0;
-	double tss = 0.0;
-
-	double mean = 0.0;
-	for (int i = 0; i < targets.size(); i++) mean += targets[i];
-	mean /= targets.size();
-
-	for (int j = 0; j < out.size(); j++)
-	{
-		ssr += (targets[j] - out[j]) * (targets[j] - out[j]);
-		tss += (targets[j] - mean) * (targets[j] - mean);
-	}
-
-	std::cout << "R^2: " << (1.0 - (ssr / tss)) << std::endl;
-	std::wstring test = inputText + L"\n" + targetText + L"\n";
-
-	for (int i = 0; i < out.size(); i++)
-	{
-		test += inputText[i];
-		if (out[i]) test += L" ";
-	}
-
-	WriteFile("datasets/output/test_tokens.txt", test);
-	WriteFile("datasets/output/error_hist.txt", errorHist);
-	std::cout << "Job done.\n";
 }
 
 DataHandler::DataHandler(NeuralNet* net, std::wstring nontoken, std::wstring token)

@@ -22,8 +22,6 @@ struct Layer
 	arma::mat				biasDerivatives;
 	arma::mat				weightDerivatives;
 
-	bool					twoDimInputs = true;
-
 	int						kernelSize = 3;
 	arma::mat				filter;
 	arma::mat				filterDerivatives;

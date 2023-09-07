@@ -46,14 +46,14 @@ void main()
 		formatted nice and neatly, but the wiki dump has all sorts of
 		extra stuff we need to get rid of.
 	*/
-	/*std::wstring nontoken = Scrub(WReadFile(NONTOKENPATH));
+	std::wstring nontoken = Scrub(WReadFile(NONTOKENPATH));
 	std::wstring token = Scrub(WReadFile(TOKENPATH));
 
 	std::wcout << "The nontokenized corpus contains " << nontoken.size() << " characters.\n";
 	std::wcout << "And the tokenized corpus contains " << token.size() << " characters.\n\n";
 
 	WriteFile("datasets/output/scrubbed_nontokenized.txt", nontoken);
-	WriteFile("datasets/output/scrubbed_tokenized.txt", token);*/
+	WriteFile("datasets/output/scrubbed_tokenized.txt", token);
 
 	/*
 		Now, we need to go through and start preparing both
@@ -61,116 +61,11 @@ void main()
 		to the neural network.
 	*/
 
-	/*NeuralNet* neuralNet = new NeuralNet({ LayerType::hidden, LayerType::hidden }, { });
+	NeuralNet* neuralNet = new NeuralNet({ LayerType::hidden, LayerType::hidden }, { });
 	DataHandler* dataHandler = new DataHandler(neuralNet, nontoken, token);
 
 	dataHandler->Train();
 
 	delete neuralNet;
-	delete dataHandler;*/
-
-	NeuralNet* neuralNet = new NeuralNet({ LayerType::convolutional, LayerType::pooling, LayerType::hidden, LayerType::hidden }, { PoolType::average });
-
-	int maxEpochs = 40;
-
-	for (int e = 0; e < maxEpochs; e++)
-	{
-		csv::CSVReader trainData("datasets/input/mnist_train.csv");
-
-		for (csv::CSVRow& row : trainData)
-		{
-			std::vector<double> targets;
-			for (int i = 0; i < 10; i++) targets.push_back(0.0);
-
-			std::vector<double> inputs;
-			int iter = 0;
-
-			for (csv::CSVField& field : row)
-			{
-				double v = field.get<double>();
-				iter++;
-
-				if (iter == 1)
-				{
-					targets[v] = 1.0;
-					continue;
-				}
-				else
-				{
-					// v = (v > 128) ? 1.0 : 0.0;
-					v /= 255.0;
-				}
-
-				inputs.push_back(v);
-			}
-
-			double sum = 0.0;
-
-			neuralNet->Train(inputs, targets);
-		}
-
-		trainData.empty();
-		std::cout << "Epoch " << e << " / Training is done." << std::endl;
-
-		double ssr = 0.0;
-		double tss = 0.0;
-
-		csv::CSVReader testData("datasets/input/mnist_test.csv");
-
-		for (csv::CSVRow& row : testData)
-		{
-			std::vector<double> targets;
-			for (int i = 0; i < 10; i++) targets.push_back(0.0);
-
-			std::vector<double> inputs;
-			int iter = 0;
-
-			int tar = 0;
-
-			for (csv::CSVField& field : row)
-			{
-				double v = field.get<double>();
-				iter++;
-
-				if (iter == 1)
-				{
-					targets[v] = 1.0;
-					tar = v;
-					continue;
-				}
-				else
-				{
-					// v = (v > 128) ? 1.0 : 0.0;
-					v /= 255.0;
-				}
-
-				inputs.push_back(v);
-			}
-
-			std::vector<double> out = neuralNet->Forward(inputs);
-
-			double highestVal = 0.0;
-			int highestT = 0;
-
-			for (int i = 0; i < 10; i++)
-			{
-				double e = (targets[i] - out[i]);
-				double m = (targets[i] - 0.1);
-				ssr += e * e;
-				tss += m * m;
-
-				if (out[i] > highestVal)
-				{
-					highestVal = out[i];
-					highestT = i;
-				}
-			}
-
-		}
-
-		testData.empty();
-		std::cout << "Epoch " << e << " / Accuracy: " << (1.0 - (ssr / tss)) << std::endl;
-	}
-
-	delete neuralNet;
+	delete dataHandler;
 }

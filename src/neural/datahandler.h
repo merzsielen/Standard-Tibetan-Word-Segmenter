@@ -1,29 +1,49 @@
 ﻿#ifndef DATAHANDLER_H
 #define DATAHANDLER_H
 
+#include <unordered_map>
+
 #include "neuralnet.h"
 
-double WCharToDouble(wchar_t c);
-
-wchar_t DoubleToWChar(double d);
+struct Embedding
+{
+	unsigned int	index;
+	std::wstring	syllable;
+	double			vector[100];
+};
 
 class DataHandler
 {
-public:
-	static constexpr int		blockStart = (int)L'༠';
-	static constexpr int		blockLength = ((int)L'྾' - 1) - (int)L'༠';
-	static constexpr double		wcharOffset = 0.2;
-
 private:
-	NeuralNet*		network;
+	unsigned int							targetCursor;
+	unsigned int							inputCursor;
 
-	std::wstring	tokenizedCorpus;
-	std::wstring	nontokenizedCorpus;
+	NeuralNet*								network;
+
+	std::wstring							tokenizedCorpus;
+	std::wstring							syllabizedTokenizedCorpus;
+	std::wstring							nontokenizedCorpus;
+
+	std::unordered_map<std::wstring, int>	freqMap;
+	std::unordered_map<std::wstring, int>	indexMap;
+	std::unordered_map<int, std::wstring>	tempMap;
+	std::unordered_map<int, std::wstring>	sylMap;
+	std::unordered_map<std::wstring, Embedding>		embMap;
+
+	unsigned int							nUniqueSyllables;
+	unsigned int							nTotalSyllables;
+
+	void									ReadEmbeddings(std::string path);
+
+	std::wstring							NextTargetSyllable();
+	std::wstring							NextInputSyllable();
+	void									Syllabize();
 
 public:
-	void			Train();
+	void									Train();
 
-	DataHandler(NeuralNet* net, std::wstring nontoken, std::wstring token);
+	DataHandler(std::wstring nontoken, std::wstring token, std::vector<LayerType> hiddenLayerTypes, std::vector<PoolType> poolTypes);
+	~DataHandler();
 };
 
 #endif

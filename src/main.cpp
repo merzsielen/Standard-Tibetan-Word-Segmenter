@@ -61,11 +61,9 @@ void main()
 		to the neural network.
 	*/
 
-	NeuralNet* neuralNet = new NeuralNet({ LayerType::hidden, LayerType::hidden }, { });
-	DataHandler* dataHandler = new DataHandler(neuralNet, nontoken, token);
+	DataHandler* dataHandler = new DataHandler(nontoken, token, { LayerType::hidden, LayerType::hidden, LayerType::hidden, LayerType::hidden, LayerType::hidden, LayerType::hidden }, { });
 
 	dataHandler->Train();
 
-	delete neuralNet;
 	delete dataHandler;
 }

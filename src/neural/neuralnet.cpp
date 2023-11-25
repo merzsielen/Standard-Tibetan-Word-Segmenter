@@ -99,6 +99,7 @@ std::vector<double> NeuralNet::Forward(std::vector<double> inputs)
 	// of the final layer and return them.
 	std::vector<double> outputs;
 	for (int i = 0; i < layers[LayerCount - 1].outputs.n_cols; i++) outputs.push_back(layers[LayerCount - 1].outputs(0, i));
+	// std::cout << outputs[0] << "\n";
 	return outputs;
 }
 
@@ -513,7 +514,7 @@ NeuralNet::NeuralNet(std::vector<LayerType> hiddenLayerTypes, std::vector<PoolTy
 		{
 			for (int k = 0; k < layers[i].weights.n_cols; k++)
 			{
-				layers[i].weights(j, k) *= 0.01;
+				layers[i].weights(j, k) *= 0.1;
 			}
 		}
 	}

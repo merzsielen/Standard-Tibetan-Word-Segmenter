@@ -34,11 +34,11 @@ class NeuralNet
 public:
 	static constexpr double	LearningRate = 0.05;
 
-	static constexpr int	WindowSize = 10;
+	static constexpr int	WindowSize = 8;
 	static constexpr int	InputCount = WindowSize * 100;
 	static constexpr int	OutputCount = 1;
-	static constexpr int	HiddenNeuronCount = 100;										// currently arbitrary (# per layer)
-	static constexpr int	HiddenLayerCount = 6;											// currently arbitrary
+	static constexpr int	HiddenNeuronCount = 80;											// currently arbitrary (# per layer)
+	static constexpr int	HiddenLayerCount = 3;											// currently arbitrary
 	static constexpr int	LayerCount = (2 + HiddenLayerCount);							// only somewhat arbitrary
 
 private:

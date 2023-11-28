@@ -211,9 +211,14 @@ void DataHandler::Syllabize()
 
 void DataHandler::Train()
 {
+	bool keepRunning = true;
+
 	unsigned int maxEpochs = 20;
-	for (int e = 0; e < maxEpochs; e++)
+	unsigned int e = 0;
+	// for (int e = 0; e < maxEpochs; e++)
+	while (keepRunning)
 	{
+		e++;
 		std::cout << "Beginning training for epoch #" << e << "\n";
 
 		// Let's throw some variables here to keep track of stuff.
@@ -261,10 +266,7 @@ void DataHandler::Train()
 			Now, we slide over the rest of our corpus.
 		*/
 
-		/*unsigned int maxTrainCount = 10000;
-		unsigned int maxTestCount = 5000;*/
-
-		unsigned int maxTrainCount = nTotalSyllables * 0.7;
+		unsigned int maxTrainCount = nTotalSyllables * 0.8;
 		unsigned int maxTestCount = nTotalSyllables * 0.2;
 
 		std::wstring test = L"";
@@ -307,7 +309,7 @@ void DataHandler::Train()
 			// Let's print for test.
 			if (syllablesCovered % 1000 == 0)
 			{
-				std::cout << "\r" << syllablesCovered << " / " << nTotalSyllables;
+				std::cout << "\r" << syllablesCovered << " / " << maxTrainCount;
 			}
 		}
 
@@ -372,16 +374,19 @@ void DataHandler::Train()
 			// Let's print for test.
 			if (syllablesCovered % 1000 == 0)
 			{
-				std::cout << "\r" << syllablesCovered << " / " << nTotalSyllables;
+				std::cout << "\r" << syllablesCovered << " / " << maxTrainCount + maxTestCount;
 			}
 		}
 
+		double estAcc = (totalCorrect / (double)totalChecked);
 		WriteFile("datasets/output/test-" + std::to_string(e) + ".txt", predTest);
 		// std::cout << "\nFinished epoch #" << e << " / Accuracy: " << (1.0 - (ssr / tss)) << "\n\n";
-		std::cout << "\nFinished epoch #" << e << " / Accuracy: " << (totalCorrect / (double)totalChecked) << "\n\n";
+		std::cout << "\nFinished epoch #" << e << " / Accuracy: " << estAcc << "\n\n";
 		syllablesCovered = 0;
 		targetCursor = 0;
 		inputCursor = 0;
+
+		if (estAcc >= 0.98 || e > 60) keepRunning = false;
 	}
 }
 

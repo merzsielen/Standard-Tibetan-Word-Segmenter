@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.22)
 
-project (lhtnnws LANGUAGES CXX)
+project (bodnnws LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -18,15 +18,15 @@ set(BASE_SRCS
     "src/main.cpp"
 )
 
-add_executable (lhtnnws ${BASE_SRCS})
+add_executable (bodnnws ${BASE_SRCS})
 
 add_custom_target(copy_datasets
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_LIST_DIR}/copy-datasets.cmake
 )
 
-add_dependencies(lhtnnws copy_datasets)
+add_dependencies(bodnnws copy_datasets)
 
 add_subdirectory(libs/armadillo-12.6.2)
 add_subdirectory(libs/csv-parser)
 
-target_link_libraries(lhtnnws armadillo csv)
+target_link_libraries(bodnnws armadillo csv)

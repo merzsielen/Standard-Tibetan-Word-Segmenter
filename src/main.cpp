@@ -33,7 +33,7 @@ void main()
 	std::string ostr = o.str();
 	std::wstring ver(ostr.begin(), ostr.end());
 	std::wcout << L"Tashi delek!\n"
-		<<"You are running the Lhasa Tibetan NNSegmenter.\n"
+		<<"You are running the Standard Tibetan NNSegmenter.\n"
 		<< L"Version: " + ver + L".\n\n";
 
 	/*
@@ -61,7 +61,7 @@ void main()
 		to the neural network.
 	*/
 
-	DataHandler* dataHandler = new DataHandler(nontoken, token, { LayerType::hidden, LayerType::hidden, LayerType::hidden, LayerType::hidden, LayerType::hidden, LayerType::hidden }, { });
+	DataHandler* dataHandler = new DataHandler(nontoken, token, { LayerType::hidden, LayerType::hidden, LayerType::hidden }, { });
 
 	dataHandler->Train();
 

@@ -23,8 +23,8 @@ double OutputError(double target, double output)
 
 double Clamp(double input)
 {
-	if (input < 0.00001) return 0.0;
-	if (input > 0.99999) return 1.0;
+	if (input < 0.0) return 0.0;
+	if (input > 1.0) return 1.0;
 	return input;
 }
 

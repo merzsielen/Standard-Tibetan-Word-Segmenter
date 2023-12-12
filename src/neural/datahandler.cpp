@@ -14,13 +14,11 @@ void DataHandler::ReadEmbeddings(std::string path)
 	std::wstring text = L" ";
 	unsigned int count = 0;
 
-	double v[100]{0};
+	double v[network->EmbeddingSize]{0};
 
 	for (int i = 0; i < input.size(); i++)
 	{
 		wchar_t c = input[i];
-
-		if (count > 99) std::cout << "This is seemingly the error " << embeddingCount << "\n";
 
 		if (c == L' ')
 		{
@@ -57,7 +55,7 @@ void DataHandler::ReadEmbeddings(std::string path)
 
 			embeddingCount++;
 
-			for (int j = 0; j < 100; j++) emb.vector[j] = v[j];
+			for (int j = 0; j < network->EmbeddingSize; j++) emb.vector[j] = v[j];
 
 			embMap[syllableText] = emb;
 			
@@ -211,14 +209,10 @@ void DataHandler::Syllabize()
 
 void DataHandler::Train()
 {
-	bool keepRunning = true;
-
 	unsigned int maxEpochs = 20;
-	unsigned int e = 0;
-	// for (int e = 0; e < maxEpochs; e++)
-	while (keepRunning)
+
+	for (int e = 0; e < maxEpochs; e++)
 	{
-		e++;
 		std::cout << "Beginning training for epoch #" << e << "\n";
 
 		// Let's throw some variables here to keep track of stuff.
@@ -232,28 +226,25 @@ void DataHandler::Train()
 		*/
 		std::vector<double> inputs(network->InputCount);
 
-		std::vector<unsigned int> inputIndices(network->WindowSize);
+		std::vector<unsigned int> inputIndices(network->WindowSize + 1);
 
 		unsigned int inputIndexCursor = 0;
-		unsigned int tempCursor = 0;
 		for (int i = 0; i < network->WindowSize + 1; i++)
 		{
 			std::wstring syl = NextInputSyllable();
 			unsigned int index = indexMap[syl];
 			syllablesCovered++;
 
-			if (i == inputWings + 1)
+			if (i == inputWings)
 			{
 				targetCursor = inputCursor;
-				continue;
+				// continue;
 			}
 
 			Embedding* emb = &embMap[syl];
-			for (int j = 0; j < 100; j++) inputs[inputIndexCursor++] = emb->vector[j];
+			for (int j = 0; j < network->EmbeddingSize; j++) inputs[inputIndexCursor++] = emb->vector[j];
 
-			// inputIndices.push_back(index);
-			inputIndices[tempCursor] = index;
-			tempCursor++;
+			inputIndices[i] = index;
 		}
 
 		/*
@@ -281,8 +272,8 @@ void DataHandler::Train()
 			unsigned int index = indexMap[inSyl];
 			syllablesCovered++;
 
-			for (int i = 0; i < network->WindowSize - 1; i++) inputIndices[i] = inputIndices[i + 1];
-			inputIndices[network->WindowSize - 1] = index;
+			for (int i = 0; i < network->WindowSize; i++) inputIndices[i] = inputIndices[i + 1];
+			inputIndices[network->WindowSize] = index;
 
 			std::wstring context = L"";
 			inputIndexCursor = 0;
@@ -293,10 +284,8 @@ void DataHandler::Train()
 
 				context += iisyl + L" : ";
 
-				for (int j = 0; j < 100; j++) inputs[inputIndexCursor++] = embed.vector[j];
+				for (int j = 0; j < network->EmbeddingSize; j++) inputs[inputIndexCursor++] = embed.vector[j];
 			}
-
-			// for (int j = 0; j < inputs.size(); j++) inputs[j] = 0.0;
 
 			// And now we need to grab our next target.
 			targSyl = NextTargetSyllable();
@@ -350,8 +339,8 @@ void DataHandler::Train()
 			double index = indexMap[inSyl];
 			syllablesCovered++;
 
-			for (int i = 0; i < network->WindowSize - 1; i++) inputIndices[i] = inputIndices[i + 1];
-			inputIndices[network->WindowSize - 1] = index;
+			for (int i = 0; i < network->WindowSize; i++) inputIndices[i] = inputIndices[i + 1];
+			inputIndices[network->WindowSize] = index;
 			
 			std::wstring context = L"";
 			inputIndexCursor = 0;
@@ -362,7 +351,7 @@ void DataHandler::Train()
 
 				context += iisyl + L" : ";
 
-				for (int j = 0; j < 100; j++) inputs[inputIndexCursor++] = embed.vector[j];
+				for (int j = 0; j < network->EmbeddingSize; j++) inputs[inputIndexCursor++] = embed.vector[j];
 			}
 
 			predTest += targSyl + L" : " + targVal + L" // " + predVal + L" // " + context + L"\n";
@@ -380,13 +369,10 @@ void DataHandler::Train()
 
 		double estAcc = (totalCorrect / (double)totalChecked);
 		WriteFile("datasets/output/test-" + std::to_string(e) + ".txt", predTest);
-		// std::cout << "\nFinished epoch #" << e << " / Accuracy: " << (1.0 - (ssr / tss)) << "\n\n";
 		std::cout << "\nFinished epoch #" << e << " / Accuracy: " << estAcc << "\n\n";
 		syllablesCovered = 0;
 		targetCursor = 0;
 		inputCursor = 0;
-
-		if (estAcc >= 0.98 || e > 60) keepRunning = false;
 	}
 }
 

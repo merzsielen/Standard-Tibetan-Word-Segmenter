@@ -3,7 +3,7 @@
  included a set of example outputs. If you wish to run this on your own computer, you will have
  to do the following:
 
- - Download the WebCrawl corpus from https://zenodo.org/records/803268/files/WebCrawl.zip
+ - Download the corpus from https://zenodo.org/records/803268/files/WebCrawl.zip
  - Concatenate the constituent txt files into a single "tokenized.txt" and move this into a
  folder titled 'datasets/input' within this directory.
  - For the time being, simply put an empty txt file called "nontokenized.txt" in the same

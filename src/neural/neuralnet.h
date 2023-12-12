@@ -34,7 +34,7 @@ class NeuralNet
 public:
 	static constexpr double	LearningRate = 0.05;
 
-	static constexpr int	EmbeddingSize = 200;
+	static constexpr int	EmbeddingSize = 100;
 	static constexpr int	WindowSize = 4;
 	static constexpr int	InputCount = (1 + WindowSize) * EmbeddingSize;
 	static constexpr int	OutputCount = 1;

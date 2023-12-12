@@ -10,7 +10,7 @@ std::wstring Scrub(std::wstring in)
 		int val = (int)in[i];
 
 		// We'll see if this actually works.
-		if (val == 32 || val == (int)L'་' || (val >= (int)L'ཀ' && val < (int)L'྾'))
+		if (val == 32 || val == (int)L'་' || val == (int)L'།' || (val >= (int)L'ཀ' && val < (int)L'྾'))
 		{
 			if (val == 32 && lastChar == L' ') continue;
 

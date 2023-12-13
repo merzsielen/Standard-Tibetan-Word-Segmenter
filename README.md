@@ -23,3 +23,6 @@ Building:
  - Build the project using cmake.
  - Say a few Hail Marys, perhaps.
  - Run the program.
+
+However you end up running this, it will train the model and spit out files
+to 'datasets/output'; these are its predictions on the test data.
